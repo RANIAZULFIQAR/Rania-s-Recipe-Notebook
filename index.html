@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en" ng-app="recipeApp">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rania Zulfiqar's Recipe Management System</title>
+  
+  <!-- AngularJS CDN -->
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+  
+  <!-- Inter Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* NEW COLOR PALETTE (Warm & Modern) */
+    :root {
+      --primary: #FF6B6B; /* Warm Coral/Red */
+      --secondary: #495867; /* Slate Blue */
+      --text: #1a1a1a;
+      --muted: #888;
+      --bg: #F8F0E5; /* Light Cream Background */
+      --card: #FFFFFF;
+      --warn: #E74C3C;
+    }
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    header {
+      display:flex;
+      flex-direction: column;
+      align-items:flex-start;
+      gap: 4px;
+      margin-bottom: 24px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    header h1 { margin: 0; font-size: 2rem; color: var(--primary); font-weight: 700; }
+    .author { font-size: 1rem; color: var(--secondary); margin: 0 0 16px 0; }
+    
+    .top-controls { 
+      display:flex; 
+      gap:12px; 
+      align-items:center; 
+      flex-wrap:wrap; 
+      width: 100%;
+      justify-content: space-between;
+    }
+    .search { padding:10px; border-radius:8px; border:1px solid #ddd; flex-grow: 1; max-width: 300px; }
+    .top-buttons { display: flex; gap: 10px; }
+
+    .card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+
+    /* Form Styles */
+    .form-grid { display:grid; grid-template-columns: 2fr 1fr; gap:20px; align-items:start; }
+    .form-grid .left { display:flex; flex-direction:column; gap:12px; }
+    label { font-weight:600; font-size:0.95rem; color: var(--secondary); margin-bottom: 2px; display: block; }
+    input[type="text"], textarea, .search, select {
+      padding:10px 12px;
+      border-radius:8px;
+      border:1px solid #ddd;
+      font-size:1rem;
+      resize:vertical;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, textarea:focus, .search:focus, select:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+    textarea { min-height:120px; }
+    
+    /* Button Styles */
+    .btn {
+      background: var(--primary);
+      color: #fff;
+      border:none;
+      padding:10px 18px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:600;
+      letter-spacing: 0.5px;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .btn:hover:not(:disabled) { 
+      background: #e06060; /* Slightly darker coral */
+      transform: translateY(-1px);
+    }
+    .btn:disabled { opacity:0.6; cursor:not-allowed; box-shadow: none; }
+    .btn.ghost { 
+      background:transparent; 
+      color:var(--secondary); 
+      border:1px solid #d2d2d2;
+      box-shadow: none;
+    }
+    .btn.ghost:hover:not(:disabled) {
+      background: #f0f0f0;
+      transform: translateY(-1px);
+      border-color: var(--secondary);
+    }
+
+    .image-preview { width:100%; height:200px; object-fit:cover; border-radius:8px; border:1px solid #eee; margin-top: 5px; }
+
+    /* Recipes list */
+    .list { margin-top:20px; display:grid; grid-template-columns: repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+
+    .recipe {
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .recipe .meta { 
+      display:flex; 
+      gap:15px; 
+      align-items:center; 
+    }
+    .recipe:hover {
+      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+      transform: translateY(-2px);
+    }
+    .recipe .thumb {
+      width:100px; height:100px; flex-shrink:0; border-radius:8px; object-fit:cover; border:3px solid var(--bg);
+    }
+    .recipe h3 { margin:0; font-size:1.15rem; color: var(--primary); }
+    .recipe p { margin:0; color:var(--muted); font-size:0.95rem; }
+
+    .recipe .actions { display:flex; gap:8px; margin-top:4px; border-top: 1px dashed #eee; padding-top: 10px;}
+    .small { padding:8px 12px; font-size:0.9rem; border-radius:6px; font-weight: 500;}
+    .small.ghost { background:#fff; border:1px solid #ddd; color:var(--secondary); }
+    .small.warn { background:var(--warn); color:white; border:none; }
+    .small.warn:hover { background: #c0392b; }
+
+    /* Modal-like details */
+    .detail {
+      margin-top:0;
+      padding:15px;
+      background:rgba(255,107,107,0.05); /* Very light coral background */
+      border-radius:8px;
+      border:1px solid rgba(255,107,107,0.2);
+    }
+    .detail strong { color: var(--secondary); }
+
+    /* pagination */
+    .pagination { display:flex; gap:8px; align-items:center; justify-content:center; margin-top:20px; }
+    .page-btn { padding:8px 14px; border-radius:6px; border:1px solid #ddd; background:white; cursor:pointer; transition: background 0.2s;}
+    .page-btn.active { background:var(--primary); color:white; border-color:var(--primary); }
+    .page-btn:hover:not(.active) { background: #f0f0f0; }
+
+    /* Messaging Overlay */
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    .message-box {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+    }
+    .message-box h3 { margin-top: 0; color: var(--primary); }
+    .message-box p { margin-bottom: 20px; }
+
+
+    /* responsive tweaks */
+    @media (max-width:800px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .top-controls { flex-direction: column; align-items: stretch; }
+        .top-buttons { justify-content: space-around; }
+        .search { max-width: 100%; }
+        header { align-items: center; text-align: center; }
+        .list { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body ng-controller="MainController as vm">
+  <div class="container">
+    <header>
+      <h1>Recipe Management System</h1>
+      <p class="author">Developed by Rania Zulfiqar</p>
+
+      <div class="top-controls">
+        <input class="search" type="text" ng-model="vm.query" placeholder="Search by title or ingredient..." />
+        <div class="top-buttons">
+          <button class="btn ghost" ng-click="vm.resetSearch()">Reset Search</button>
+          <button class="btn" ng-click="vm.openAdd()">+ Add Recipe</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ADD / EDIT form (toggle) -->
+    <section class="card" ng-if="vm.showForm" style="margin-bottom: 20px;">
+      <h2 style="font-size: 1.4rem; color:var(--secondary);">{{ vm.editing ? "Edit Recipe" : "Add New Recipe" }}</h2>
+
+      <div class="form-grid">
+        <div class="left">
+          <div>
+            <label>Title <span style="color:var(--warn)">*</span></label>
+            <input type="text" ng-model="vm.form.title" placeholder="e.g., Chocolate Cake" />
+          </div>
+
+          <div>
+            <label>Ingredients <small style="color:var(--muted)">(comma separated)</small> <span style="color:var(--warn)">*</span></label>
+            <input type="text" ng-model="vm.form.ingredients" placeholder="e.g., flour, sugar, eggs" />
+          </div>
+
+          <div>
+            <label>Instructions</label>
+            <textarea ng-model="vm.form.instructions" placeholder="Steps to prepare..."></textarea>
+          </div>
+
+          <div style="margin-top:8px;">
+            <button class="btn" ng-click="vm.saveRecipe()" ng-disabled="!vm.form.title || !vm.form.ingredients">
+              {{ vm.editing ? "Update Recipe" : "Add Recipe" }}
+            </button>
+            <button class="btn ghost" ng-click="vm.cancelForm()">Cancel</button>
+          </div>
+        </div>
+
+        <div style="padding-top: 5px;">
+          <label>Image (optional)</label>
+          <div style="margin-bottom:8px;">
+            <input type="file" accept="image/*" id="imgInput" onchange="angular.element(this).scope().vm.loadImage(this)" />
+          </div>
+
+          <div ng-if="vm.form.image">
+            <img ng-src="{{vm.form.image}}" alt="preview" class="image-preview" />
+          </div>
+          <div ng-if="!vm.form.image" style="color:var(--muted); font-size:0.9rem; padding: 5px 0;">
+            No image selected. (Image stored as Base64 locally).
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recipes list -->
+    <section style="margin-top:18px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px;">
+        <div style="color:var(--secondary); font-weight: 600;">{{ vm.filteredCount }} recipe(s) found</div>
+
+        <div style="display:flex;gap:10px;align-items:center">
+          <label style="font-size:0.9rem; color:var(--muted); font-weight: 400;">Items per page</label>
+          <select ng-model="vm.perPage" ng-change="vm.changePage(1)">
+            <option value="4">4</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="12">12</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="list">
+        <!-- ng-repeat uses the range filter for pagination logic -->
+        <div class="card recipe" ng-repeat="r in vm.paginated = (vm.filtered = (vm.recipes | filter:vm.searchFilter) ) | limitTo:vm.perPage: (vm.currentPage-1)*vm.perPage" ng-cloak>
+          <div class="meta">
+            <img ng-src="{{ r.image || 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2296%22 height=%2296%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22%23F5F5F5%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2210%22 fill=%22%23999%22>NO IMAGE</text></svg>' }}" alt="thumb" class="thumb"/>
+            <div style="flex:1">
+              <h3>{{ r.title }}</h3>
+              <p style="font-weight: 600; color: var(--secondary);">Ingredients:</p>
+              <p>{{ r.ingredients }}</p>
+            </div>
+          </div>
+
+          <div class="detail" ng-if="r.showDetail">
+            <strong>Instructions:</strong>
+            <p style="margin:6px 0 0 0; white-space:pre-wrap">{{ r.instructions || 'No instructions provided.' }}</p>
+          </div>
+
+          <div class="actions">
+            <button class="small ghost" ng-click="vm.toggleDetail(r)">{{ r.showDetail ? 'Hide Instructions' : 'View Instructions' }}</button>
+            <button class="small" ng-click="vm.editRecipe(r)">Edit</button>
+            <button class="small warn" ng-click="vm.deleteRecipe(r)">Delete</button>
+          </div>
+        </div>
+        
+        <div ng-if="vm.filteredCount === 0" style="grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 50px;">
+            <p>No recipes found matching your search. Try adding one!</p>
+        </div>
+      </div>
+
+      <!-- pagination -->
+      <div class="pagination" ng-if="vm.filtered.length > vm.perPage">
+        <button class="page-btn" ng-class="{active: p === vm.currentPage}" ng-repeat="p in [] | range:vm.totalPages" ng-click="vm.changePage(p)">{{p}}</button>
+      </div>
+
+    </section>
+
+    <!-- small footer -->
+    <footer style="margin-top:30px; color:var(--muted); font-size:0.9rem; border-top: 1px solid #ddd; padding-top: 20px;">
+      <div style="font-weight: 600;">Data Persistence:</div>
+      <div>Data is stored in your browser's **Local Storage** under the key <code>recipes</code>.</div>
+      <div style="margin-top:12px; display: flex; gap: 10px;">
+        <button class="btn ghost" ng-click="vm.seedSample()">Seed Sample Recipes</button>
+        <button class="btn warn small" ng-click="vm.confirmResetAll()">Reset All Recipes</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div class="overlay" ng-if="vm.showConfirm">
+    <div class="message-box">
+        <h3>{{ vm.confirmTitle }}</h3>
+        <p>{{ vm.confirmMessage }}</p>
+        <button class="btn warn" ng-click="vm.handleConfirmation(true)">Yes, {{ vm.confirmAction }}</button>
+        <button class="btn ghost" ng-click="vm.handleConfirmation(false)" style="margin-left: 10px;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Alert/Message Modal -->
+  <div class="overlay" ng-if="vm.showMessage">
+    <div class="message-box">
+        <h3>Attention</h3>
+        <p>{{ vm.messageText }}</p>
+        <button class="btn" ng-click="vm.showMessage = false">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // Angular module
+    angular.module('recipeApp', [])
+      // range filter to build paging array
+      .filter('range', function() {
+        return function(input, totalFn) {
+          var total = parseInt(totalFn()); // Execute the function passed from view
+          for (var i=1;i<=total;i++) input.push(i);
+          return input;
+        };
+      })
+      .controller('MainController', ['$window', '$filter', '$timeout', function($window, $filter, $timeout) {
+        var vm = this;
+
+        // localStorage key
+        vm.storageKey = 'recipes';
+
+        // UI state
+        vm.showForm = false;
+        vm.editing = false;
+        vm.form = {};
+        vm.recipes = [];
+        vm.query = '';
+        vm.perPage = 6;
+        vm.currentPage = 1;
+        
+        // Modal state (Replacing alert/confirm)
+        vm.showConfirm = false;
+        vm.confirmTitle = '';
+        vm.confirmMessage = '';
+        vm.confirmAction = '';
+        vm.confirmCallback = null;
+        vm.showMessage = false;
+        vm.messageText = '';
+
+        // --- Core Data Logic ---
+
+        vm.init = function() {
+          var raw = $window.localStorage.getItem(vm.storageKey);
+          if (raw) {
+            try { vm.recipes = JSON.parse(raw) || []; }
+            catch(e) { vm.recipes = []; }
+          } else {
+            vm.recipes = [];
+          }
+          vm.updateCounts();
+        };
+
+        vm.updateStorage = function() {
+          $window.localStorage.setItem(vm.storageKey, JSON.stringify(vm.recipes));
+          vm.updateCounts();
+        };
+
+        vm.updateCounts = function() {
+          vm.filtered = $filter('filter')(vm.recipes, vm.searchFilter);
+          vm.filteredCount = vm.filtered.length;
+          vm.totalPagesCount = Math.ceil(vm.filteredCount / vm.perPage) || 1;
+          if (vm.currentPage > vm.totalPagesCount) vm.currentPage = vm.totalPagesCount;
+        };
+
+        // custom filter function for search
+        vm.searchFilter = function(item) {
+          if (!vm.query) return true;
+          var q = vm.query.toLowerCase();
+          var inTitle = (item.title || '').toLowerCase().indexOf(q) !== -1;
+          var inIngr = (item.ingredients || '').toLowerCase().indexOf(q) !== -1;
+          return inTitle || inIngr;
+        };
+        
+        // --- CRUD Operations ---
+
+        // open add form
+        vm.openAdd = function() {
+          vm.showForm = true;
+          vm.editing = false;
+          vm.form = { title:'', ingredients:'', instructions:'', image:null };
+        };
+
+        // cancel
+        vm.cancelForm = function() {
+          vm.showForm = false;
+          vm.editing = false;
+          vm.form = {};
+        };
+
+        // save (add or update)
+        vm.saveRecipe = function() {
+          // validation: title + ingredients
+          if (!vm.form.title || !vm.form.ingredients) {
+            vm.openMessage('Please provide a recipe title and list the ingredients (comma separated).');
+            return;
+          }
+
+          if (vm.editing) {
+            // update existing
+            var idx = vm.recipes.findIndex(r => r.id === vm.form.id);
+            if (idx >= 0) {
+              vm.recipes[idx] = angular.copy(vm.form);
+            }
+          } else {
+            // create new with simple id
+            var id = Date.now() + Math.floor(Math.random() * 999);
+            var newRecipe = angular.copy(vm.form);
+            newRecipe.id = id;
+            newRecipe.showDetail = false;
+            vm.recipes.unshift(newRecipe);
+            vm.changePage(1); // Go to page 1 to see the new recipe
+          }
+
+          vm.updateStorage();
+          vm.cancelForm();
+        };
+
+        // edit
+        vm.editRecipe = function(r) {
+          vm.showForm = true;
+          vm.editing = true;
+          vm.form = angular.copy(r);
+          // scroll to top of form (nice to see)
+          $window.scrollTo({top:0, behavior:'smooth'});
+        };
+        
+        // delete with confirm
+        vm.deleteRecipe = function(r) {
+            vm.openConfirm(
+                'Delete Recipe Confirmation',
+                'Are you sure you want to permanently delete "' + r.title + '"? This action cannot be undone.',
+                'Delete',
+                function() {
+                    vm.recipes = vm.recipes.filter(item => item.id !== r.id);
+                    vm.updateStorage();
+                    vm.openMessage('Recipe successfully deleted!');
+                }
+            );
+        };
+
+        vm.toggleDetail = function(r) {
+          r.showDetail = !r.showDetail;
+        };
+        
+        // --- Utility Functions ---
+
+        // load image from file input (called by inline onchange)
+        vm.loadImage = function(input) {
+          var file = input.files && input.files[0];
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            // Must use $apply since this is outside the AngularJS digest cycle
+            var scope = angular.element(input).scope();
+            scope.$apply(function() {
+              vm.form.image = e.target.result;
+            });
+          };
+          reader.readAsDataURL(file);
+        };
+
+        // reset all confirmation
+        vm.confirmResetAll = function() {
+            vm.openConfirm(
+                'Reset All Recipes',
+                'This will remove ALL recipes from your browser storage. Continue?',
+                'Reset',
+                function() {
+                    vm.recipes = [];
+                    vm.updateStorage();
+                    vm.openMessage('All recipes have been reset.');
+                }
+            );
+        };
+
+        // seed sample recipes
+        vm.seedSample = function() {
+          var sample = [
+            { id: Date.now()+1, title:'Classic Tomato Pasta', ingredients:'pasta, tomato sauce, garlic, olive oil', instructions:'Boil pasta. Sauté garlic in oil, add sauce and season. Combine with pasta.', image:null, showDetail:false },
+            { id: Date.now()+2, title:'Quick Chocolate Pancakes', ingredients:'flour, milk, egg, sugar, cocoa powder, maple syrup', instructions:'Mix dry ingredients, add wet. Pour onto hot, greased pan. Serve with syrup.', image:null, showDetail:false },
+            { id: Date.now()+3, title:'Mediterranean Salad', ingredients:'cucumber, tomato, olive, feta cheese, red onion, oregano', instructions:'Chop vegetables and toss with olive oil and spices. Simple and fresh.', image:null, showDetail:false }
+          ];
+          // Add samples only if their ID doesn't conflict (or just append, as Date.now() prevents easy conflict)
+          vm.recipes = sample.concat(vm.recipes);
+          vm.updateStorage();
+          vm.changePage(1);
+          vm.openMessage('3 sample recipes added to your dashboard!');
+        };
+
+        // reset search
+        vm.resetSearch = function() {
+          vm.query = '';
+          vm.changePage(1);
+        };
+
+        // --- Pagination Logic ---
+
+        // returns total pages (used by filter)
+        vm.totalPages = function() {
+          vm.updateCounts();
+          return vm.totalPagesCount || 1;
+        };
+
+        vm.changePage = function(p) {
+          vm.currentPage = parseInt(p) || 1;
+          vm.updateCounts();
+          // scroll a bit for mobile
+          $window.scrollTo({ top: 80, behavior: 'smooth' });
+        };
+        
+        // --- Modal/Message Box Logic (Replacing alert/confirm) ---
+
+        vm.openMessage = function(text) {
+            vm.messageText = text;
+            vm.showMessage = true;
+        };
+
+        vm.openConfirm = function(title, message, action, callback) {
+            vm.confirmTitle = title;
+            vm.confirmMessage = message;
+            vm.confirmAction = action;
+            vm.confirmCallback = callback;
+            vm.showConfirm = true;
+        };
+
+        vm.handleConfirmation = function(result) {
+            vm.showConfirm = false;
+            if (result && vm.confirmCallback) {
+                // Use $timeout to ensure the callback runs inside the digest cycle
+                $timeout(vm.confirmCallback, 0); 
+            }
+            // Reset state
+            vm.confirmCallback = null;
+        };
+
+
+        // initialize controller
+        vm.init();
+      }]);
+  </script>
+</body>
+</html>
